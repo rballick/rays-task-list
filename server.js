@@ -27,7 +27,7 @@ var pusher = new Pusher({
   useTLS: true
 });
 
-const db_url = process.env.NODE_ENV === 'production' || true ? 'webuser:g7kfnPc_k8Lvxx4m@ds259732.mlab.com:59732/heroku_p3154bdz' : 'localhost:27017/task_list';
+const db_url = process.env.NODE_ENV === 'production' || true ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
 mongoose.connect(`mongodb://${db_url}`, { useNewUrlParser: true });
 app.use('/api', bodyParser.urlencoded({ extended: true }));
 app.use('/api', bodyParser.json());
