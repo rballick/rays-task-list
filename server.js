@@ -107,7 +107,7 @@ router.route('/status/:_id')
 			if (err) console.log(err);
 			prepareNote(task.notes,note).then((notes) => {
 				data.notes = notes;
-				Task.findByIdAndUpdate(req.params._id,params,function(err, results) {
+				Task.findByIdAndUpdate(req.params._id,data,function(err, results) {
 					if (err) console.log(err);
 					const triggers = {
 						[data.task_date] : [ data.completed ? 'completed' : 'uncompleted']
