@@ -27,7 +27,7 @@ var pusher = new Pusher({
   useTLS: true
 });
 
-const db_url = process.env.NODE_ENV === 'production' || true ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
+const db_url = process.env.NODE_ENV === 'production' ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
 mongoose.connect(`mongodb://${db_url}`, { useNewUrlParser: true });
 app.use('/api', bodyParser.urlencoded({ extended: true }));
 app.use('/api', bodyParser.json());
@@ -110,9 +110,9 @@ router.route('/status/:_id')
 				Task.findByIdAndUpdate(req.params._id,data,function(err, results) {
 					if (err) console.log(err);
 					const triggers = {
-						[data.task_date] : [ data.completed ? 'completed' : 'uncompleted']
+						[task.task_date] : [ data.completed ? 'completed' : 'uncompleted']
 					}
-					if (completed !== data.completed) triggers[data.task_date].push(data.completed ? 'uncompleted' : 'completed');
+					if (completed !== data.completed) triggers[task.task_date].push(data.completed ? 'uncompleted' : 'completed');
 					pusher.trigger('tasks','update',triggers);
 					res.json({success:true});
 				});
