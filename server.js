@@ -237,7 +237,11 @@ router.route('/forward')
 		const from = moment(req.body.from).endOf('d').tz('America/New_York').startOf('d');
 		const date = moment(req.body.date).endOf('d').tz('America/New_York').startOf('d');
 		Task.findOne({"task_date": date}).sort({task_order:-1}).exec(function(err, order) {
-			if (err) console.log(err);
+			if (err) {
+				console.log(err);
+				res.json({errr:err});
+				return;
+			}
 			const task_order = order ? order.task_order + 1 : 1;
 			Task.find({task_date:{$lt:from},completed:false},[],{sort:{task_order:1,task_date:1}},function(err,tasks) {
 				if (err) console.log(err);
@@ -252,11 +256,13 @@ router.route('/forward')
 						task.notes = notes;
 						task.save((err) => {
 							if (err) console.log(err);
+							console.log(`${index+1} === ${tasks.length}`);
 							if (index+1 === tasks.length) {
 								const now = from.clone();
 								const triggers = {};
 								while (now.isBefore(date) || now.isSame(date)) {
 									triggers[now] = ['uncompleted'];
+									now.add(1,'d')
 								}
 								pusher.trigger('tasks','update',triggers);
 								res.json({success:true});
