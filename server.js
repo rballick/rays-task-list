@@ -8,7 +8,8 @@ const Pusher = require('pusher');
 const fs = require('fs');
 const moment = require('moment');
 require('moment-timezone');
-const Task = require('./model/task');
+const Task = process.env.NODE_ENV === "production" ? require('./model/task') : require('./model/test-task');
+const TestTask = require('./model/test-task');
 
 const app = express();
 const router = express.Router();
@@ -27,7 +28,7 @@ var pusher = new Pusher({
   useTLS: true
 });
 
-const db_url = process.env.NODE_ENV === 'production' ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
+const db_url = process.env.NODE_ENV === 'production' || true ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
 mongoose.connect(`mongodb://${db_url}`, { useNewUrlParser: true });
 app.use('/api', bodyParser.urlencoded({ extended: true }));
 app.use('/api', bodyParser.json());
@@ -121,88 +122,110 @@ router.route('/status/:_id')
 	});
 	
 		
-router.route('/reorder')
+router.route('/test_tasks')
 	.get(function(req,res) {
 		const uncompleted = ['in progress','delegated','forwarded'];
 		const completed = ['deleted','completed'];
-		Task.find({}).sort({completed:1,task_order:1}).exec(function(err, tasks) {
+		TestTask.find({}).sort({completed:1,task_order:1}).exec(function(err, tasks) {
+			res.json(tasks);
+		});
+	})
+	.put(function(req,res) {
+		const uncompleted = ['in progress','delegated','forwarded'];
+		const completed = ['deleted','completed'];
+		TestTask.find({}).sort({completed:1,task_order:1}).exec(function(err, tasks) {
 			if (err) console.log(err);
-			const triggers = {};
-			let d = -2;
-			let i;
-			let c = false;
-			Array.from(tasks).forEach((task,index) => {
-				if (index !== 6 && index < 15 && index%3 === 0) {
-					d++;
-					i = 1 - index;
+			if (tasks.length < 18) {
+				const newTasks = [];
+				for (let x=0;x<18-tasks.length;x++) {
+					newTasks.push(new TestTask());
 				}
-				if (index >= 15 && index%2 === 1) {
-					c = true;
-					if (index === 15) d = -2;
-					d++;
-					i = 4 - index;
-					if (d === 0) i += 3;
-				}
-				const notes = [
-					{
-						note_type: 'note',
-						note_date: moment().tz('America/New_York').startOf('d'),
-						note: 'Note 1',
-						note_details: {}
-					},
-					{
-						note_type: 'note',
-						note_date: moment().tz('America/New_York').startOf('d'),
-						note: 'Note 2',
-						note_details: {}
-					},
-					{
-						note_type: 'note',
-						note_date: moment().tz('America/New_York').startOf('d'),
-						note: 'Note 3',
-						note_details: {}
+				TestTask.insertMany(newTasks).then((docs)=>{
+					tasks = [...tasks,...newTasks];
+					updateTasks(tasks);
+				});
+			} else {
+				updateTasks(tasks);
+			}
+			
+			const updateTasks = (tasks) => {
+				const triggers = {};
+				let d = -2;
+				let i;
+				let c = false;
+				Array.from(tasks).forEach((task,index) => {
+					if (index !== 6 && index < 15 && index%3 === 0) {
+						d++;
+						i = 1 - index;
 					}
-				];
-				task.notes = notes;
-				const params = { 'task_order' : index + i, 'task_name': `Task ${index + i}`,completed:c,notes:task.notes};
-				const task_type = c ? 'completed' : 'uncompleted';
-				params.current_status = index < 15 ? uncompleted[index%3] : completed[index%2];
-				params.task_date = moment().tz('America/New_York').startOf('d').add(d,'d');
-				params.task_details = `These are the details for ${params.task_name}`;
-				params.forwarded = false;
-				if (params.current_status === 'forwarded') {
-					params.current_status = 'in progress';
-					params.forwarded = true;
-					task.notes.unshift({
-						note_type: 'status',
-						note_date: moment().tz('America/New_York').startOf('d'),
-						note: 'forwarded',
-						note_details: {
-							to: params.task_date,
-							from: task.task_date
+					if (index >= 15 && index%2 === 1) {
+						c = true;
+						if (index === 15) d = -2;
+						d++;
+						i = 4 - index;
+						if (d === 0) i += 3;
+					}
+					const notes = [
+						{
+							note_type: 'note',
+							note_date: moment().tz('America/New_York').startOf('d'),
+							note: 'Note 1',
+							note_details: {}
+						},
+						{
+							note_type: 'note',
+							note_date: moment().tz('America/New_York').startOf('d'),
+							note: 'Note 2',
+							note_details: {}
+						},
+						{
+							note_type: 'note',
+							note_date: moment().tz('America/New_York').startOf('d'),
+							note: 'Note 3',
+							note_details: {}
 						}
-					});
-				}
-				if (typeof triggers[params.task_date] === 'undefined') triggers[params.task_date] = [task_type];
-				if (triggers[params.task_date].indexOf(task_type) === -1) triggers[params.task_date].push(task_type);
-				if (index < 19) {
-					Task.findByIdAndUpdate(task._id, { $set: params}, { new: true }, function (err, order) {
-					  if (err) console.log(err);
-					  if (index === tasks.length - 1) {
-						pusher.trigger('tasks', 'update', triggers);
-						res.send('Records updated');
-					  }
-					});
-				} else {
-					Task.findByIdAndDelete(task._id, function (err, order) {
-					  if (err) console.log(err);
-					  if (index === tasks.length - 1) {
-						pusher.trigger('tasks', 'update', triggers);
-						res.send('Records updated');
-					  }
-					});
-				}
-			});
+					];
+					task.notes = notes;
+					const params = { 'task_order' : index + i, 'task_name': `Task ${index + i}`,completed:c,notes:task.notes};
+					const task_type = c ? 'completed' : 'uncompleted';
+					params.current_status = index < 15 ? uncompleted[index%3] : completed[index%2];
+					params.task_date = moment().tz('America/New_York').startOf('d').add(d,'d');
+					params.task_details = `These are the details for ${params.task_name}`;
+					params.forwarded = false;
+					if (params.current_status === 'forwarded') {
+						params.current_status = 'in progress';
+						params.forwarded = true;
+						task.notes.unshift({
+							note_type: 'status',
+							note_date: moment().tz('America/New_York').startOf('d'),
+							note: 'forwarded',
+							note_details: {
+								to: params.task_date,
+								from: task.task_date
+							}
+						});
+					}
+					if (typeof triggers[params.task_date] === 'undefined') triggers[params.task_date] = [task_type];
+					if (triggers[params.task_date].indexOf(task_type) === -1) triggers[params.task_date].push(task_type);
+					if (index < 19) {
+						TestTask.findByIdAndUpdate(task._id, { $set: params}, { new: true }, function (err, order) {
+						  if (err) console.log(err);
+						  if (index === tasks.length - 1) {
+							pusher.trigger('tasks', 'update', triggers);
+							res.send('Records updated');
+						  }
+						});
+					} else {
+						TestTask.findByIdAndDelete(task._id, function (err, order) {
+						  if (err) console.log(err);
+						  if (index === tasks.length - 1) {
+							pusher.trigger('tasks', 'update', triggers);
+							res.send('Records updated');
+						  }
+						});
+					}
+				});
+			}
 		});
 	});
 
