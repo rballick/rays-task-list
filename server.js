@@ -8,11 +8,12 @@ const Pusher = require('pusher');
 const fs = require('fs');
 const moment = require('moment');
 require('moment-timezone');
-const Task = process.env.NODE_ENV === "production" && false ? require('./model/task') : require('./model/test-task');
+const Task = process.env.NODE_ENV === "production" ? require('./model/task') : require('./model/test-task');
 const TestTask = require('./model/test-task');
-
 const app = express();
 const router = express.Router();
+
+mongoose.set('useFindAndModify', false);
 
 //g7kfnPc_k8Lvxx4m
 app.set("port", process.env.PORT || 3001);
@@ -57,12 +58,12 @@ const prepareNote = (notes,note) => {
 router.route('/tasks')
 	.get(function(req, res) {
 		const params = {};
-		if (typeof req.query.date !== 'undefined') params.task_date = req.query.date === 'past' ? {$lt: moment(req.query.from).endOf('d').tz('America/New_York').startOf('d')} : moment(req.query.date).endOf('day').tz('America/New_York').startOf('d');
+		if (typeof req.query.date !== 'undefined') params.task_date = req.query.past === 'true' ? {$lt: moment(new Date(req.query.date)).endOf('d').tz('America/New_York').startOf('d')} : moment(new Date(req.query.date)).endOf('day').tz('America/New_York').startOf('d');
 		if (typeof req.query.completed !== 'undefined') params.completed = Boolean(Number(req.query.completed));
  		Task.find(params,[],{sort: {task_date:1,task_order: 1}}, function(err, tasks) {
 			if (err)
 				res.send(err);
-			res.json(tasks);
+//			res.json(tasks);
 		});
 	})
 	.post(function(req, res) {
@@ -89,6 +90,16 @@ router.route('/tasks')
 	
 
 router.route('/tasks/:_id')
+	.get(function(req,res) {
+		if (req.params._id === '0') {
+			res.json(new Task());
+		} else {
+			Task.findById(req.params._id,function(err, task) {
+				if (err) console.log(err);
+				res.json(task);
+			});
+		}
+	})
 	.put(function(req,res) {
 		const params = req.body;
 		Task.findByIdAndUpdate(req.params._id,params,function(err, results) {
@@ -126,7 +137,7 @@ router.route('/test_tasks')
 	.get(function(req,res) {
 		const uncompleted = ['in progress','delegated','forwarded'];
 		const completed = ['deleted','completed'];
-		TestTask.find({}).sort({completed:1,task_order:1}).exec(function(err, tasks) {
+		TestTask.find({}).sort({task_date:1,completed:1,task_order:1}).exec(function(err, tasks) {
 			res.json(tasks);
 		});
 	})
@@ -135,22 +146,11 @@ router.route('/test_tasks')
 		const completed = ['deleted','completed'];
 		TestTask.find({}).sort({completed:1,task_order:1}).exec(function(err, tasks) {
 			if (err) console.log(err);
-			if (tasks.length < 18) {
-				const newTasks = [];
-				for (let x=0;x<18-tasks.length;x++) {
-					newTasks.push(new TestTask());
-				}
-				TestTask.insertMany(newTasks).then((docs)=>{
-					tasks = [...tasks,...newTasks];
-					updateTasks(tasks);
-				});
-			} else {
-				updateTasks(tasks);
-			}
 			
 			const updateTasks = (tasks) => {
 				const triggers = {};
-				let d = -2;
+				const start = typeof req.query.d === 'undefined' ? -2 : Number(req.query.d);
+				let d = start;
 				let i;
 				let c = false;
 				Array.from(tasks).forEach((task,index) => {
@@ -160,10 +160,10 @@ router.route('/test_tasks')
 					}
 					if (index >= 15 && index%2 === 1) {
 						c = true;
-						if (index === 15) d = -2;
+						if (index === 15) d = start;
 						d++;
 						i = 4 - index;
-						if (d === 0) i += 3;
+						if (d === start + 2) i += 3;
 					}
 					const notes = [
 						{
@@ -225,6 +225,18 @@ router.route('/test_tasks')
 						});
 					}
 				});
+			}
+			if (tasks.length < 19) {
+				const newTasks = [];
+				for (let x=0;x<19-tasks.length;x++) {
+					newTasks.push(new TestTask());
+				}
+				TestTask.insertMany(newTasks).then((docs)=>{
+					tasks = [...tasks,...newTasks];
+					updateTasks(tasks);
+				});
+			} else {
+				updateTasks(tasks);
 			}
 		});
 	});
