@@ -63,7 +63,7 @@ router.route('/tasks')
  		Task.find(params,[],{sort: {task_date:1,task_order: 1}}, function(err, tasks) {
 			if (err)
 				res.send(err);
-//			res.json(tasks);
+			res.json(tasks);
 		});
 	})
 	.post(function(req, res) {
