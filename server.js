@@ -8,7 +8,7 @@ const Pusher = require('pusher');
 const fs = require('fs');
 const moment = require('moment');
 require('moment-timezone');
-const Task = process.env.NODE_ENV === "production" ? require('./model/task') : require('./model/test-task');
+const Task = process.env.NODE_ENV === "production" && false ? require('./model/task') : require('./model/test-task');
 const TestTask = require('./model/test-task');
 const app = express();
 const router = express.Router();
@@ -61,8 +61,11 @@ router.route('/tasks')
 		if (typeof req.query.date !== 'undefined') params.task_date = req.query.past === 'true' ? {$lt: moment(new Date(req.query.date)).endOf('d').tz('America/New_York').startOf('d')} : moment(new Date(req.query.date)).endOf('day').tz('America/New_York').startOf('d');
 		if (typeof req.query.completed !== 'undefined') params.completed = Boolean(Number(req.query.completed));
  		Task.find(params,[],{sort: {task_date:1,task_order: 1}}, function(err, tasks) {
-			if (err)
-				res.send(err);
+			if (err) {
+				console.log(err);
+				res.json({erro:err});
+				return;
+			}
 			res.json(tasks);
 		});
 	})
