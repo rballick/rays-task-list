@@ -66,7 +66,7 @@ router.route('/tasks')
 				res.json({erro:err});
 				return;
 			}
-			res.json(tasks);
+//			res.json(tasks);
 		});
 	})
 	.post(function(req, res) {
