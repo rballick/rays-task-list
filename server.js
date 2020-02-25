@@ -19,6 +19,7 @@ mongoose.set('useFindAndModify', false);
 app.set("port", process.env.PORT || 3001);
 if (process.env.NODE_ENV === "production") {
   app.use('/',express.static("client/build"));
+  app.use('/dev',express.static("client/build"));
 }
 
 var pusher = new Pusher({
@@ -29,8 +30,8 @@ var pusher = new Pusher({
   useTLS: true
 });
 
-const db_url = process.env.NODE_ENV === 'production' || true ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
-mongoose.connect(`mongodb://${db_url}`, { useNewUrlParser: true });
+const db_url = process.env.NODE_ENV === 'production' ? 'webuser:g7kfnPc_k8Lvxx4m@ds257314.mlab.com:57314/heroku_g6fzwb1w' : 'localhost:27017/task_list';
+mongoose.connect(`mongodb://${db_url}`, { useNewUrlParser: true, useUnifiedTopology: true });
 app.use('/api', bodyParser.urlencoded({ extended: true }));
 app.use('/api', bodyParser.json());
 //To prevent errors from Cross Origin Resource Sharing, we will set 
