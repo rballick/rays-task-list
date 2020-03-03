@@ -19,7 +19,7 @@ mongoose.set('useFindAndModify', false);
 app.set("port", process.env.PORT || 3001);
 if (process.env.NODE_ENV === "production") {
   app.use('/',express.static("client/build"));
-  app.use('/dev',express.static("client/dev/build"));
+  app.use('/dev',express.static("client/dev"));
 }
 
 var pusher = new Pusher({
