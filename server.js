@@ -19,7 +19,7 @@ mongoose.set('useFindAndModify', false);
 app.set("port", process.env.PORT || 3001);
 if (process.env.NODE_ENV === "production") {
   app.use('/',express.static("client/build"));
-  app.use('/dev',express.static("client/dev"));
+  app.use('/dev',express.static("client/dev/build"));
 }
 
 var pusher = new Pusher({
@@ -59,8 +59,8 @@ const prepareNote = (notes,note) => {
 router.route('/tasks')
 	.get(function(req, res) {
 		const params = {};
-req.query.past = 'true';
-req.query.date = moment().add(2,'days').format('MM/DD/YYYY');
+//req.query.past = 'true';
+//req.query.date = moment().add(2,'days').format('MM/DD/YYYY');
 		if (typeof req.query.date !== 'undefined') params.task_date = req.query.past === 'true' ? {$lt: moment(new Date(req.query.date)).endOf('d').tz('America/New_York').startOf('d')} : moment(new Date(req.query.date)).endOf('day').tz('America/New_York').startOf('d');
 		if (typeof req.query.completed !== 'undefined') params.completed = Boolean(Number(req.query.completed));
 //params.forwarded = false;
