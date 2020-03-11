@@ -59,8 +59,8 @@ const prepareNote = (notes,note) => {
 router.route('/tasks')
 	.get(function(req, res) {
 		const params = {};
-req.query.past = 'true';
-req.query.date = moment().add(2,'days').format('MM/DD/YYYY');
+//req.query.past = 'true';
+//req.query.date = moment().add(2,'days').format('MM/DD/YYYY');
 		if (typeof req.query.date !== 'undefined') params.task_date = req.query.past === 'true' ? {$lt: moment(new Date(req.query.date)).endOf('d').tz('America/New_York').startOf('d')} : moment(new Date(req.query.date)).endOf('day').tz('America/New_York').startOf('d');
 		if (typeof req.query.completed !== 'undefined') params.completed = Boolean(Number(req.query.completed));
 //params.forwarded = false;
@@ -282,7 +282,8 @@ router.route('/test_tasks')
 	.put(function(req,res) {
 		let d = typeof req.query.start === 'undefined' ? -1 : Number(req.query.start);
 		const days = typeof req.query.days === 'undefined' ? 4 : Number(req.query.days);
-		const taskNumber = (d < 0 ? Math.abs(d) * 5 : 0) + ((days + (d < 0 ? d : 0)) * 3) + (d > 0 ? 0 : 5);
+		const r = typeof req.query.repeat === 'undefined' ? 2 : Number(req.query.repeat)
+		const taskNumber = (d < 0 ? Math.abs(d) * 5 : 0) + (d > 0 ? days*3 : ((days - Math.abs(d) - 1) * 3) + ((3*r)+2));
 		const uncompleted = ['in progress','delegated','forwarded'];
 		const completed = ['deleted','completed'];
 		const triggers = {};
@@ -293,7 +294,7 @@ router.route('/test_tasks')
 				const ret = [];
 				let date = moment().add(d,'day');
 				for (let index=0;index<taskNumber;index++) {
-					const count = date.isBefore(moment(),'day') ? 5 : (date.isAfter(moment(),'day') ? 3 : 8);
+					const count = date.isBefore(moment(),'day') ? 5 : (date.isAfter(moment(),'day') ? 3 : (3*r)+2);
 					for (let i=0;i<count;i++) {
 						const task = tasks[index + i];
 						taskArray.push(task);
