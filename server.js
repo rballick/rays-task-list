@@ -8,7 +8,7 @@ const Pusher = require('pusher');
 const fs = require('fs');
 const moment = require('moment');
 require('moment-timezone');
-const Task = process.env.NODE_ENV === "production" && false ? require('./model/task') : require('./model/test-task');
+const Task = process.env.NODE_ENV === "production" ? require('./model/task') : require('./model/test-task');
 const TestTask = require('./model/test-task');
 const app = express();
 const router = express.Router();
